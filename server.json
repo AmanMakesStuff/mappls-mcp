@@ -1,0 +1,29 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.AmanMakesStuff/mappls-mcp",
+  "description": "MCP server for Mappls (MapMyIndia) — India-first maps API for AI agents",
+  "repository": {
+    "url": "https://github.com/AmanMakesStuff/mappls-mcp",
+    "source": "github"
+  },
+  "version": "2.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "mappls-mcp",
+      "version": "2.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Your Mappls static API key — get it at https://maps.mappls.com/api",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "MAPPLS_API_KEY"
+        }
+      ]
+    }
+  ]
+}
