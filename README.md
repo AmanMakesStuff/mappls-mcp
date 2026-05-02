@@ -37,12 +37,14 @@ An MCP (Model Context Protocol) server for [Mappls](https://maps.mappls.com) —
 
 ## Getting Started
 
-### 1. Get a Mappls API key
+### 1. Get a Mappls API key (free)
 
-1. Sign up at [maps.mappls.com/api](https://maps.mappls.com/api)
-2. Create a new **Cloud** project
-3. Go to **Credentials** tab — copy the **Static Key**
-4. Go to **Whitelisting** tab — leave IP field blank for unrestricted access (or add your server IP for production)
+1. Sign up at [maps.mappls.com/api](https://maps.mappls.com/api) — free account, no credit card
+2. After login, click **Create New Project** → choose **Cloud** as the platform
+3. Open the project → go to the **Credentials** tab → copy the **Static Key**
+4. Go to the **Whitelisting** tab → **leave the IP field blank** for unrestricted access
+
+> The free tier includes generous API limits suitable for development and small projects.
 
 ### 2. Install
 
