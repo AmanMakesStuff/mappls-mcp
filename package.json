@@ -1,6 +1,7 @@
 {
   "name": "mappls-mcp",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "mcpName": "io.github.AmanMakesStuff/mappls-mcp",
   "description": "MCP server for Mappls (MapMyIndia) — India-first maps API for AI agents",
   "main": "build/index.js",
   "bin": {
@@ -12,14 +13,18 @@
     "start": "node build/index.js",
     "prepare": "npm run build"
   },
-  "keywords": ["mcp", "mappls", "mapmyindia", "maps", "india", "geocoding", "modelcontextprotocol"],
+  "keywords": ["mcp", "mappls", "mapmyindia", "maps", "india", "geocoding", "modelcontextprotocol", "location", "routing"],
   "author": "AmanMakesStuff",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AmanMakesStuff/mappls-mcp.git"
+  },
+  "homepage": "https://github.com/AmanMakesStuff/mappls-mcp#readme",
   "type": "commonjs",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "node-fetch": "^2.7.0",
-    "zod": "^4.4.2"
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
