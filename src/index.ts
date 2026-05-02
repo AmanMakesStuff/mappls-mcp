@@ -10,57 +10,27 @@ import fetch from "node-fetch";
 import { z } from "zod";
 
 const API_KEY = process.env.MAPPLS_API_KEY;
-const BASE_URL = "https://atlas.mappls.com/api";
-const TOKEN_URL = "https://outpost.mappls.com/api/security/oauth/token";
 
 if (!API_KEY) {
   console.error("Error: MAPPLS_API_KEY environment variable is required");
   process.exit(1);
 }
 
-// Mappls uses OAuth2 client credentials. API_KEY here is "client_id:client_secret"
-// Users can pass either just a REST key or client_id:client_secret
-let accessToken: string | null = null;
-let tokenExpiry = 0;
-
-async function getAccessToken(): Promise<string> {
-  if (accessToken && Date.now() < tokenExpiry) return accessToken;
-
-  const [clientId, clientSecret] = API_KEY!.split(":");
-  if (!clientSecret) {
-    // Fallback: treat as a direct REST API key
-    return API_KEY!;
-  }
-
-  const res = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`,
-  });
-
-  if (!res.ok) throw new Error(`Token fetch failed: ${res.statusText}`);
-  const data = (await res.json()) as { access_token: string; expires_in: number };
-  accessToken = data.access_token;
-  tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
-  return accessToken;
-}
-
-async function mapplsGet(path: string, params: Record<string, string>) {
-  const token = await getAccessToken();
-  const url = new URL(`${BASE_URL}${path}`);
+async function mapplsGet(baseUrl: string, params: Record<string, string>) {
+  const url = new URL(baseUrl);
+  url.searchParams.set("access_token", API_KEY!);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString(), {
-    headers: { Authorization: `bearer ${token}` },
-  });
+  const res = await fetch(url.toString());
+  if (res.status === 204) return { results: [], message: "No results found" };
   if (!res.ok) throw new Error(`Mappls API error ${res.status}: ${res.statusText}`);
   return res.json();
 }
 
-// ── Tool schemas ────────────────────────────────────────────────────────────
+// ── Tool schemas ─────────────────────────────────────────────────────────────
 
 const GeocodeInput = z.object({
   address: z.string().describe("Full address to geocode (e.g. 'Connaught Place, New Delhi')"),
-  region: z.string().optional().describe("Region bias, e.g. 'IND' for India"),
+  itemCount: z.number().optional().default(5).describe("Max results to return (default 5)"),
 });
 
 const ReverseGeocodeInput = z.object({
@@ -73,78 +43,71 @@ const SearchNearbyInput = z.object({
   lat: z.number().describe("Reference latitude"),
   lng: z.number().describe("Reference longitude"),
   radius: z.number().optional().default(1000).describe("Search radius in metres (default 1000)"),
+  itemCount: z.number().optional().default(10).describe("Max results (default 10)"),
 });
 
 const GetDirectionsInput = z.object({
-  origin: z.string().describe("Origin as 'lat,lng' or a full address"),
-  destination: z.string().describe("Destination as 'lat,lng' or a full address"),
+  origin: z.string().describe("Start point as 'lat,lng'"),
+  destination: z.string().describe("End point as 'lat,lng'"),
   profile: z
     .enum(["driving", "biking", "walking"])
     .optional()
     .default("driving")
-    .describe("Travel mode"),
+    .describe("Travel mode (default: driving)"),
 });
 
 const ValidatePincodeInput = z.object({
   pincode: z.string().describe("6-digit Indian pincode"),
 });
 
-// ── Handlers ────────────────────────────────────────────────────────────────
+// ── Handlers ─────────────────────────────────────────────────────────────────
 
 async function geocode(input: z.infer<typeof GeocodeInput>) {
-  const params: Record<string, string> = { address: input.address };
-  if (input.region) params.region = input.region;
-  const data = await mapplsGet("/places/geocode", params);
-  return data;
+  return mapplsGet("https://search.mappls.com/search/address/geocode", {
+    address: input.address,
+    itemCount: String(input.itemCount),
+  });
 }
 
 async function reverseGeocode(input: z.infer<typeof ReverseGeocodeInput>) {
-  const data = await mapplsGet("/places/reverse_geocode", {
+  return mapplsGet("https://search.mappls.com/search/address/rev-geocode", {
     lat: String(input.lat),
     lng: String(input.lng),
   });
-  return data;
 }
 
 async function searchNearby(input: z.infer<typeof SearchNearbyInput>) {
-  const data = await mapplsGet("/places/nearby/json", {
+  return mapplsGet("https://search.mappls.com/search/places/nearby/json", {
     keywords: input.keywords,
     refLocation: `${input.lat},${input.lng}`,
     radius: String(input.radius),
+    itemCount: String(input.itemCount),
   });
-  return data;
 }
 
 async function getDirections(input: z.infer<typeof GetDirectionsInput>) {
-  // If origin/destination look like addresses, geocode them first
-  const resolvePoint = async (point: string): Promise<string> => {
-    if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(point)) return point;
-    const geo = (await geocode({ address: point })) as any;
-    const loc = geo?.copResults?.latitude
-      ? `${geo.copResults.latitude},${geo.copResults.longitude}`
-      : null;
-    if (!loc) throw new Error(`Could not geocode: ${point}`);
-    return loc;
+  // Route API uses lng,lat order (not lat,lng)
+  // Accepts "lat,lng" input but converts to "lng,lat" for the API
+  const toApiCoords = (point: string) => {
+    const [lat, lng] = point.split(",").map((s) => s.trim());
+    return `${lng},${lat}`;
   };
-
-  const [originCoords, destCoords] = await Promise.all([
-    resolvePoint(input.origin),
-    resolvePoint(input.destination),
-  ]);
-
-  const data = await mapplsGet(
-    `/directions/v1/${input.profile}/${originCoords};${destCoords}`,
+  const origin = toApiCoords(input.origin);
+  const dest = toApiCoords(input.destination);
+  return mapplsGet(
+    `https://route.mappls.com/route/direction/route_adv/${input.profile}/${origin};${dest}`,
     { overview: "full", steps: "true" }
   );
-  return data;
 }
 
 async function validatePincode(input: z.infer<typeof ValidatePincodeInput>) {
   if (!/^\d{6}$/.test(input.pincode)) {
     return { valid: false, error: "Pincode must be exactly 6 digits" };
   }
-  const data = await mapplsGet("/places/pincode/json", { pincode: input.pincode });
-  return data;
+  // Geocode API accepts pincode directly and returns district/state info
+  return mapplsGet("https://search.mappls.com/search/address/geocode", {
+    address: input.pincode,
+  });
 }
 
 // ── MCP server ───────────────────────────────────────────────────────────────
@@ -164,7 +127,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         type: "object",
         properties: {
           address: { type: "string", description: "Full address (e.g. 'India Gate, New Delhi')" },
-          region: { type: "string", description: "Region bias, default 'IND'" },
+          itemCount: { type: "number", description: "Max results to return (default 5)" },
         },
         required: ["address"],
       },
@@ -192,6 +155,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           lat: { type: "number", description: "Reference latitude" },
           lng: { type: "number", description: "Reference longitude" },
           radius: { type: "number", description: "Search radius in metres (default 1000)" },
+          itemCount: { type: "number", description: "Max results (default 10)" },
         },
         required: ["keywords", "lat", "lng"],
       },
@@ -199,18 +163,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "get_directions",
       description:
-        "Get driving/biking/walking directions between two points in India, including distance and step-by-step route.",
+        "Get driving/biking/walking directions between two lat,lng points in India, including distance and step-by-step route.",
       inputSchema: {
         type: "object",
         properties: {
-          origin: {
-            type: "string",
-            description: "Start point as 'lat,lng' or a full address",
-          },
-          destination: {
-            type: "string",
-            description: "End point as 'lat,lng' or a full address",
-          },
+          origin: { type: "string", description: "Start point as 'lat,lng'" },
+          destination: { type: "string", description: "End point as 'lat,lng'" },
           profile: {
             type: "string",
             enum: ["driving", "biking", "walking"],
