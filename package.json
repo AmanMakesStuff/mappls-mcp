@@ -1,0 +1,30 @@
+{
+  "name": "mappls-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Mappls (MapMyIndia) — India-first maps API for AI agents",
+  "main": "build/index.js",
+  "bin": {
+    "mappls-mcp": "build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node build/index.js",
+    "prepare": "npm run build"
+  },
+  "keywords": ["mcp", "mappls", "mapmyindia", "maps", "india", "geocoding", "modelcontextprotocol"],
+  "author": "AmanMakesStuff",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "node-fetch": "^2.7.0",
+    "zod": "^4.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/node-fetch": "^2.6.13",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}
