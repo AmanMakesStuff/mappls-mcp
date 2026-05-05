@@ -1,6 +1,6 @@
 {
   "name": "mappls-mcp",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "mcpName": "io.github.AmanMakesStuff/mappls-mcp",
   "description": "MCP server for Mappls (MapMyIndia) — India-first maps API for AI agents",
   "main": "build/index.js",

@@ -17,7 +17,7 @@
       },
       "environmentVariables": [
         {
-          "description": "Your Mappls static API key — get it at https://maps.mappls.com/api",
+          "description": "Your Mappls static API key — get it at https://about.mappls.com/api",
           "isRequired": true,
           "format": "string",
           "isSecret": true,

@@ -13,7 +13,7 @@ const API_KEY = process.env.MAPPLS_API_KEY;
 if (!API_KEY) {
   console.error(
     "Error: MAPPLS_API_KEY environment variable is not set.\n" +
-    "Get your free API key at https://maps.mappls.com/api\n" +
+    "Get your free API key at https://about.mappls.com/api\n" +
     "Then set: export MAPPLS_API_KEY=your_key"
   );
   process.exit(1);
